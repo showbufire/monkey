@@ -24,6 +24,9 @@ const (
 	COMMA     = ","
 	SEMICOLON = ";"
 
+	EQ     = "=="
+	NOT_EQ = "!="
+
 	LPAREN = "("
 	RPAREN = ")"
 	LBRACE = "{"

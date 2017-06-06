@@ -140,7 +140,7 @@ func (p *Parser) parseExpression(precedence int) ast.Expression {
 		return nil
 	}
 	leftExp := prefix()
-	for !p.peekTokenIs(token.SEMICOLON) {
+	for !p.peekTokenIs(token.SEMICOLON) && !p.peekTokenIs(token.EOF) {
 		if pr, ok := precedences[p.peekToken.Type]; ok && precedence < pr {
 			infix := p.infixParseFns[p.peekToken.Type]
 			if infix == nil {
@@ -150,8 +150,11 @@ func (p *Parser) parseExpression(precedence int) ast.Expression {
 			p.nextToken()
 			leftExp = infix(leftExp)
 		} else {
-			p.noPrecedenceForTokenError(p.peekToken.Type)
-			return nil
+			if !ok {
+				p.noPrecedenceForTokenError(p.peekToken.Type)
+				return nil
+			}
+			break
 		}
 	}
 

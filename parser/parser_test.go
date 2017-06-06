@@ -18,7 +18,7 @@ let foobar = 838383;
 	p := New(l)
 
 	program := p.ParseProgram()
-	checkParserErrors(t, p)
+	checkParserErrors(t, p, input)
 	if len(program.Statements) != 3 {
 		t.Fatalf("program.Statements does not contain 3 statements. got = %d", len(program.Statements))
 	}
@@ -37,7 +37,7 @@ let foobar = 838383;
 	}
 }
 
-func checkParserErrors(t *testing.T, p *Parser) {
+func checkParserErrors(t *testing.T, p *Parser, input string) {
 	errors := p.Errors()
 	if len(errors) == 0 {
 		return
@@ -46,6 +46,7 @@ func checkParserErrors(t *testing.T, p *Parser) {
 	for _, msg := range errors {
 		t.Errorf("parser error: %q", msg)
 	}
+	t.Errorf("parser input is %s", input)
 	t.FailNow()
 }
 
@@ -80,7 +81,7 @@ return 993322;
 	p := New(l)
 
 	program := p.ParseProgram()
-	checkParserErrors(t, p)
+	checkParserErrors(t, p, input)
 
 	if len(program.Statements) != 3 {
 		t.Fatalf("program.Statements does not contain 3 statements. got=%d", len(program.Statements))
@@ -105,7 +106,7 @@ func TestIdentifierExpression(t *testing.T) {
 	l := lexer.New(input)
 	p := New(l)
 	program := p.ParseProgram()
-	checkParserErrors(t, p)
+	checkParserErrors(t, p, input)
 
 	if len(program.Statements) != 1 {
 		t.Fatalf("program has not enough statements. got=%d",
@@ -133,7 +134,7 @@ func TestIntegerLiteralExpression(t *testing.T) {
 	l := lexer.New(input)
 	p := New(l)
 	program := p.ParseProgram()
-	checkParserErrors(t, p)
+	checkParserErrors(t, p, input)
 
 	if len(program.Statements) != 1 {
 		t.Fatalf("program has not enough statements. got=%d",
@@ -154,13 +155,14 @@ func TestParsingPrefixExpression(t *testing.T) {
 	}{
 		{"!5;", "!", 5},
 		{"-15;", "-", 15},
+		{"!10", "!", 10},
 	}
 
 	for _, tt := range prefixTests {
 		l := lexer.New(tt.input)
 		p := New(l)
 		program := p.ParseProgram()
-		checkParserErrors(t, p)
+		checkParserErrors(t, p, tt.input)
 
 		if len(program.Statements) != 1 {
 			t.Fatalf("program.Statements does not contain %d statements. got=%d\n", 1, len(program.Statements))
@@ -222,7 +224,7 @@ func TestParsingInfixExpressions(t *testing.T) {
 		l := lexer.New(tt.input)
 		p := New(l)
 		program := p.ParseProgram()
-		checkParserErrors(t, p)
+		checkParserErrors(t, p, tt.input)
 
 		if len(program.Statements) != 1 {
 			t.Fatalf("program.Statements does not contain %d statements. got=%d", 1, len(program.Statements))

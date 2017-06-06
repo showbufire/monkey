@@ -110,11 +110,11 @@ func isLetter(ch byte) bool {
 }
 
 func (l *Lexer) readChar() {
+	l.position = l.readPosition
 	if l.readPosition >= len(l.input) {
 		l.ch = 0
 	} else {
 		l.ch = l.input[l.readPosition]
-		l.position = l.readPosition
 		l.readPosition += 1
 	}
 }

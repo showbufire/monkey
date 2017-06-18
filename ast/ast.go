@@ -119,6 +119,24 @@ func (il *IntegerLiteral) String() string {
 	return il.Token.Literal
 }
 
+type BooleanLiteral struct {
+	Token token.Token
+	Value bool
+}
+
+func (bl *BooleanLiteral) expressionNode() {}
+
+func (bl *BooleanLiteral) TokenLiteral() string {
+	return bl.Token.Literal
+}
+
+func (bl *BooleanLiteral) String() string {
+	if bl.Value {
+		return "true"
+	}
+	return "false"
+}
+
 type PrefixExpression struct {
 	Token    token.Token
 	Operator string

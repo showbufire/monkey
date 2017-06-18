@@ -34,6 +34,8 @@ var precedences = map[token.TokenType]int{
 	token.MINUS:    SUM,
 	token.ASTERISK: PRODUCT,
 	token.SLASH:    PRODUCT,
+	token.LPAREN:   LOWEST,
+	token.RPAREN:   LOWEST,
 }
 
 type Parser struct {
@@ -63,6 +65,7 @@ func New(l *lexer.Lexer) *Parser {
 	p.prefixParseFns[token.MINUS] = p.parsePrefixExpression
 	p.prefixParseFns[token.TRUE] = p.parseBooleanLiteral
 	p.prefixParseFns[token.FALSE] = p.parseBooleanLiteral
+	p.prefixParseFns[token.LPAREN] = p.parseGroupedExpression
 
 	p.infixParseFns = make(map[token.TokenType]infixParseFn)
 	p.infixParseFns[token.EQ] = p.parseInfixExpression
@@ -133,6 +136,18 @@ func (p *Parser) noInfixParseFnError(t token.TokenType) {
 func (p *Parser) noPrecedenceForTokenError(t token.TokenType) {
 	msg := fmt.Sprintf("no precedence for %s", t)
 	p.errors = append(p.errors, msg)
+}
+
+func (p *Parser) parseGroupedExpression() ast.Expression {
+	p.nextToken()
+	exp := p.parseExpression(LOWEST)
+	if !p.peekTokenIs(token.RPAREN) {
+		msg := fmt.Sprintf("missing )")
+		p.errors = append(p.errors, msg)
+		return nil
+	}
+	p.nextToken()
+	return exp
 }
 
 func (p *Parser) parseExpression(precedence int) ast.Expression {
@@ -265,12 +280,4 @@ func (p *Parser) expectPeek(t token.TokenType) bool {
 	}
 	p.peekError(t)
 	return false
-}
-
-func (p *Parser) registerPrefixFn(tokenType token.TokenType, fn prefixParseFn) {
-	p.prefixParseFns[tokenType] = fn
-}
-
-func (p *Parser) registerInfixFn(tokenType token.TokenType, fn infixParseFn) {
-	p.infixParseFns[tokenType] = fn
 }

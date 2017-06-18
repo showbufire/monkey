@@ -1,5 +1,7 @@
 package token
 
+import "fmt"
+
 type TokenType string
 
 type Token struct {
@@ -47,6 +49,10 @@ func NewToken(tokenType TokenType, literal string) Token {
 		Literal: literal,
 	}
 	return tok
+}
+
+func (t *Token) String() string {
+	return fmt.Sprintf("Token[Type: %v Literal: %v]", t.Type, t.Literal)
 }
 
 var keywords = map[string]TokenType{

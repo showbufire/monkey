@@ -34,10 +34,7 @@ var precedences = map[token.TokenType]int{
 	token.MINUS:    SUM,
 	token.ASTERISK: PRODUCT,
 	token.SLASH:    PRODUCT,
-	token.LPAREN:   LOWEST,
-	token.RPAREN:   LOWEST,
-	token.LBRACE:   LOWEST,
-	token.RBRACE:   LOWEST,
+	token.LPAREN:   CALL,
 }
 
 type Parser struct {
@@ -69,6 +66,7 @@ func New(l *lexer.Lexer) *Parser {
 	p.prefixParseFns[token.FALSE] = p.parseBooleanLiteral
 	p.prefixParseFns[token.LPAREN] = p.parseGroupedExpression
 	p.prefixParseFns[token.IF] = p.parseIfExpression
+	p.prefixParseFns[token.FUNCTION] = p.parseFunctionLiteral
 
 	p.infixParseFns = make(map[token.TokenType]infixParseFn)
 	p.infixParseFns[token.EQ] = p.parseInfixExpression
@@ -79,6 +77,7 @@ func New(l *lexer.Lexer) *Parser {
 	p.infixParseFns[token.MINUS] = p.parseInfixExpression
 	p.infixParseFns[token.ASTERISK] = p.parseInfixExpression
 	p.infixParseFns[token.SLASH] = p.parseInfixExpression
+	p.infixParseFns[token.LPAREN] = p.parseCallExpression
 
 	return p
 }
@@ -136,11 +135,6 @@ func (p *Parser) noInfixParseFnError(t token.TokenType) {
 	p.errors = append(p.errors, msg)
 }
 
-func (p *Parser) noPrecedenceForTokenError(t token.TokenType) {
-	msg := fmt.Sprintf("no precedence for %s", t)
-	p.errors = append(p.errors, msg)
-}
-
 func (p *Parser) parseGroupedExpression() ast.Expression {
 	p.nextToken()
 	exp := p.parseExpression(LOWEST)
@@ -167,10 +161,6 @@ func (p *Parser) parseExpression(precedence int) ast.Expression {
 			p.nextToken()
 			leftExp = infix(leftExp)
 		} else {
-			if !ok {
-				p.noPrecedenceForTokenError(p.peekToken.Type)
-				return nil
-			}
 			break
 		}
 	}
@@ -211,9 +201,15 @@ func (p *Parser) parseIfExpression() ast.Expression {
 	if !p.expectPeek(token.RPAREN) {
 		return nil
 	}
+	if !p.expectPeek(token.LBRACE) {
+		return nil
+	}
 	ie.Consequence = p.parseBlockStatement()
 	if p.peekTokenIs(token.ELSE) {
 		p.nextToken()
+		if !p.expectPeek(token.LBRACE) {
+			return nil
+		}
 		ie.Alternative = p.parseBlockStatement()
 	}
 
@@ -221,9 +217,6 @@ func (p *Parser) parseIfExpression() ast.Expression {
 }
 
 func (p *Parser) parseBlockStatement() *ast.BlockStatement {
-	if !p.expectPeek(token.LBRACE) {
-		return nil
-	}
 	be := &ast.BlockStatement{
 		Token: p.curToken,
 	}
@@ -271,6 +264,63 @@ func (p *Parser) parseBooleanLiteral() ast.Expression {
 	return bl
 }
 
+func (p *Parser) parseFunctionLiteral() ast.Expression {
+	fl := &ast.FunctionLiteral{Token: p.curToken}
+	if !p.expectPeek(token.LPAREN) {
+		return nil
+	}
+	fl.Parameters = p.parseParameters()
+	if !p.expectPeek(token.LBRACE) {
+		return nil
+	}
+	fl.Body = p.parseBlockStatement()
+	return fl
+}
+
+func (p *Parser) parseParameters() []*ast.Identifier {
+	params := []*ast.Identifier{}
+	if p.peekTokenIs(token.RPAREN) {
+		p.nextToken()
+		return params
+	}
+	p.nextToken()
+	params = append(params, p.parseIdentifier().(*ast.Identifier))
+	for !p.peekTokenIs(token.RPAREN) && !p.peekTokenIs(token.EOF) {
+		if !p.expectPeek(token.COMMA) {
+			return nil
+		}
+		p.nextToken()
+		params = append(params, p.parseIdentifier().(*ast.Identifier))
+	}
+	if !p.expectPeek(token.RPAREN) {
+		return nil
+	}
+	return params
+}
+
+func (p *Parser) parseCallExpression(left ast.Expression) ast.Expression {
+	ce := &ast.CallExpression{
+		Token:    p.curToken,
+		Function: left,
+	}
+	ce.Arguments = []ast.Expression{}
+	if p.peekTokenIs(token.RPAREN) {
+		p.nextToken()
+		return ce
+	}
+	p.nextToken()
+	ce.Arguments = append(ce.Arguments, p.parseExpression(LOWEST))
+	for !p.peekTokenIs(token.RPAREN) && !p.peekTokenIs(token.EOF) {
+		if !p.expectPeek(token.COMMA) {
+			return nil
+		}
+		p.nextToken()
+		ce.Arguments = append(ce.Arguments, p.parseExpression(LOWEST))
+	}
+	p.expectPeek(token.RPAREN)
+	return ce
+}
+
 func (p *Parser) parseReturnStatement() *ast.ReturnStatement {
 	stmt := &ast.ReturnStatement{Token: p.curToken}
 	p.nextToken()
@@ -309,8 +359,8 @@ func (p *Parser) peekTokenIs(t token.TokenType) bool {
 }
 
 func (p *Parser) peekError(t token.TokenType) {
-	msg := fmt.Sprintf("expected next token to be %s, got %s instead",
-		t, p.peekToken.Type)
+	msg := fmt.Sprintf("expected next token to be %s, got %v instead",
+		t, p.peekToken)
 	p.errors = append(p.errors, msg)
 }
 

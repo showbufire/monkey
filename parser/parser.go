@@ -36,6 +36,8 @@ var precedences = map[token.TokenType]int{
 	token.SLASH:    PRODUCT,
 	token.LPAREN:   LOWEST,
 	token.RPAREN:   LOWEST,
+	token.LBRACE:   LOWEST,
+	token.RBRACE:   LOWEST,
 }
 
 type Parser struct {
@@ -66,6 +68,7 @@ func New(l *lexer.Lexer) *Parser {
 	p.prefixParseFns[token.TRUE] = p.parseBooleanLiteral
 	p.prefixParseFns[token.FALSE] = p.parseBooleanLiteral
 	p.prefixParseFns[token.LPAREN] = p.parseGroupedExpression
+	p.prefixParseFns[token.IF] = p.parseIfExpression
 
 	p.infixParseFns = make(map[token.TokenType]infixParseFn)
 	p.infixParseFns[token.EQ] = p.parseInfixExpression
@@ -141,12 +144,9 @@ func (p *Parser) noPrecedenceForTokenError(t token.TokenType) {
 func (p *Parser) parseGroupedExpression() ast.Expression {
 	p.nextToken()
 	exp := p.parseExpression(LOWEST)
-	if !p.peekTokenIs(token.RPAREN) {
-		msg := fmt.Sprintf("missing )")
-		p.errors = append(p.errors, msg)
+	if !p.expectPeek(token.RPAREN) {
 		return nil
 	}
-	p.nextToken()
 	return exp
 }
 
@@ -197,6 +197,47 @@ func (p *Parser) parseInfixExpression(leftExp ast.Expression) ast.Expression {
 	p.nextToken()
 	ie.Right = p.parseExpression(precedences[ie.Token.Type])
 	return ie
+}
+
+func (p *Parser) parseIfExpression() ast.Expression {
+	ie := &ast.IfExpression{
+		Token: p.curToken,
+	}
+	if !p.expectPeek(token.LPAREN) {
+		return nil
+	}
+	p.nextToken()
+	ie.Condition = p.parseExpression(LOWEST)
+	if !p.expectPeek(token.RPAREN) {
+		return nil
+	}
+	ie.Consequence = p.parseBlockStatement()
+	if p.peekTokenIs(token.ELSE) {
+		p.nextToken()
+		ie.Alternative = p.parseBlockStatement()
+	}
+
+	return ie
+}
+
+func (p *Parser) parseBlockStatement() *ast.BlockStatement {
+	if !p.expectPeek(token.LBRACE) {
+		return nil
+	}
+	be := &ast.BlockStatement{
+		Token: p.curToken,
+	}
+	be.Statements = []ast.Statement{}
+	for !p.peekTokenIs(token.RBRACE) && !p.peekTokenIs(token.EOF) {
+		p.nextToken()
+		if stmt := p.parseStatement(); stmt != nil {
+			be.Statements = append(be.Statements, stmt)
+		}
+	}
+	if !p.expectPeek(token.RBRACE) {
+		return nil
+	}
+	return be
 }
 
 func (p *Parser) parseIdentifier() ast.Expression {

@@ -12,7 +12,7 @@ func TestLetStatements(t *testing.T) {
 	input := `
 let x = 5;
 let y = 10;
-let foobar = 838383;
+let foobar = true;
 `
 	l := lexer.New(input)
 	p := New(l)
@@ -24,14 +24,15 @@ let foobar = 838383;
 	}
 	tests := []struct {
 		expectedIdentifier string
+		expectedValue      interface{}
 	}{
-		{"x"},
-		{"y"},
-		{"foobar"},
+		{"x", 5},
+		{"y", 10},
+		{"foobar", true},
 	}
 	for i, tt := range tests {
 		stmt := program.Statements[i]
-		if !testLetStatement(t, stmt, tt.expectedIdentifier) {
+		if !testLetStatement(t, stmt, tt.expectedIdentifier, tt.expectedValue) {
 			return
 		}
 	}
@@ -50,7 +51,7 @@ func checkParserErrors(t *testing.T, p *Parser, input string) {
 	t.FailNow()
 }
 
-func testLetStatement(t *testing.T, s ast.Statement, name string) bool {
+func testLetStatement(t *testing.T, s ast.Statement, name string, value interface{}) bool {
 	if s.TokenLiteral() != "let" {
 		t.Errorf("s.TokenLiteral not 'let'. got=%q", s.TokenLiteral())
 		return false
@@ -68,6 +69,9 @@ func testLetStatement(t *testing.T, s ast.Statement, name string) bool {
 		t.Errorf("letStmt.Name.TokenLiteral not '%s'. got='%s'", name, letStmt.Name)
 		return false
 	}
+	if !testLiteralExpression(t, letStmt.Value, value) {
+		return false
+	}
 	return true
 }
 
@@ -75,7 +79,7 @@ func TestReturnStatement(t *testing.T) {
 	input := `
 return 5;
 return 10;
-return 993322;
+return false;
 `
 	l := lexer.New(input)
 	p := New(l)
@@ -87,15 +91,20 @@ return 993322;
 		t.Fatalf("program.Statements does not contain 3 statements. got=%d", len(program.Statements))
 	}
 
-	for _, stmt := range program.Statements {
+	expectedValues := []interface{}{5, 10, false}
+
+	for i, stmt := range program.Statements {
 		returnStmt, ok := stmt.(*ast.ReturnStatement)
 
 		if !ok {
-			t.Errorf("stmt not *ast.returnStatement. got=%T", stmt)
-			continue
+			t.Fatalf("stmt not *ast.returnStatement. got=%T", stmt)
 		}
 		if returnStmt.TokenLiteral() != "return" {
-			t.Errorf("returnStmt.TokenLiteral not 'return', got %q", returnStmt.TokenLiteral())
+			t.Fatalf("returnStmt.TokenLiteral not 'return', got %q", returnStmt.TokenLiteral())
+			return
+		}
+		if !testLiteralExpression(t, returnStmt.ReturnValue, expectedValues[i]) {
+			return
 		}
 	}
 }

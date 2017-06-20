@@ -197,13 +197,18 @@ func (ie *IfExpression) String() string {
 	var out bytes.Buffer
 	out.WriteString("if")
 
+	out.WriteString(" ")
 	out.WriteString(ie.Condition.String())
 	out.WriteString(" ")
 
+	out.WriteString(" { ")
 	out.WriteString(ie.Consequence.String())
+	out.WriteString(" }")
+
 	if ie.Alternative != nil {
-		out.WriteString("else ")
+		out.WriteString(" else { ")
 		out.WriteString(ie.Alternative.String())
+		out.WriteString(" }")
 	}
 	return out.String()
 }
@@ -248,7 +253,7 @@ func (es *ExpressionStatement) TokenLiteral() string {
 
 func (es *ExpressionStatement) String() string {
 	if es.Expression != nil {
-		return es.Expression.String()
+		return es.Expression.String() + ";"
 	}
 	return ""
 }

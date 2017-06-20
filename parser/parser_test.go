@@ -343,59 +343,59 @@ func TestOperatorPrecedenceParsing(t *testing.T) {
 	}{
 		{
 			"-a * b",
-			"((-a) * b)",
+			"((-a) * b);",
 		},
 		{
 			"!-a",
-			"(!(-a))",
+			"(!(-a));",
 		},
 		{
 			"a + b + c",
-			"((a + b) + c)",
+			"((a + b) + c);",
 		},
 		{
 			"a + b - c",
-			"((a + b) - c)",
+			"((a + b) - c);",
 		},
 		{
 			"a * b * c",
-			"((a * b) * c)",
+			"((a * b) * c);",
 		},
 		{
 			"a * b / c",
-			"((a * b) / c)",
+			"((a * b) / c);",
 		},
 		{
 			"a + b / c",
-			"(a + (b / c))",
+			"(a + (b / c));",
 		},
 		{
 			"a + b * c + d / e - f",
-			"(((a + (b * c)) + (d / e)) - f)",
+			"(((a + (b * c)) + (d / e)) - f);",
 		},
 		{
 			"3 + 4; -5 * 5",
-			"(3 + 4)((-5) * 5)",
+			"(3 + 4);((-5) * 5);",
 		},
 		{
 			"5 < 4 != 3 > 4",
-			"((5 < 4) != (3 > 4))",
+			"((5 < 4) != (3 > 4));",
 		},
 		{
 			"3 + 4 * 5 == 3 * 1 + 4 * 5",
-			"((3 + (4 * 5)) == ((3 * 1) + (4 * 5)))",
+			"((3 + (4 * 5)) == ((3 * 1) + (4 * 5)));",
 		},
 		{
 			"3 > 5 == false",
-			"((3 > 5) == false)",
+			"((3 > 5) == false);",
 		},
 		{
 			"3 < 5 == true",
-			"((3 < 5) == true)",
+			"((3 < 5) == true);",
 		},
 		{
 			"(3 + 4) * 5 == 3 * (4 * 5)",
-			"(((3 + 4) * 5) == (3 * (4 * 5)))",
+			"(((3 + 4) * 5) == (3 * (4 * 5)));",
 		},
 	}
 
@@ -679,8 +679,8 @@ func TestFunctionLiteralCallExpression(t *testing.T) {
 		t.Fatalf("ce.Function is not ast.FunctionLiteral. got=%T",
 			ce.Function)
 	}
-	if fl.String() != "fn(x){x}" {
-		t.Fatalf("fl.String not fn(x){x}. got=%s", fl.String())
+	if fl.String() != "fn(x){x;}" {
+		t.Fatalf("fl.String not fn(x){x;}. got=%s", fl.String())
 	}
 	if len(ce.Arguments) != 1 {
 		t.Fatalf("#ce.Arguments is not 1. got=%d", len(ce.Arguments))
